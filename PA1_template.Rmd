@@ -1,25 +1,88 @@
 ---
-title: "Reproducible Research: Peer Assessment 1"
-output: 
-  html_document:
-    keep_md: true
+title: "Reproducible Research - Project Assignment 1"
+author: "Sai krishnan"
+date: "Saturday, October 18, 2014"
+output: html_document
 ---
 
+## Dataset and assignment summary
+The dataset consists of two months of activity data from an anonymous individual collected during the months of October and November, 2012 and include the number of steps taken in 5 minute intervals each day.  
 
-## Loading and preprocessing the data
-
-
-
-## What is mean total number of steps taken per day?
-
-
-
-## What is the average daily activity pattern?
+The objective of this assignment is to answer the following questions:-  
+1. What is the mean total number of steps taken each day?  
+2. What is the average daily activity pattern?  
+3. Are there differences in the activity pattern on weekdays and weekends?  
 
 
+## R code to answer the questions  
 
-## Imputing missing values
+### Instructions for loading the dataset  
+Please load the dataset to your R working directory for the following code to execute correctly.  
+
+### R code to answer question 1  
+
+```{r}
+library(knitr)
+library(ggplot2)
+library(plyr)
+library(lubridate)
+# Load the activity dataset as a dataframe
+activityData <- as.data.frame(read.csv("activity.csv"))
+# Prepare a histogram of the steps. Mising (NA) values are ignored.
+totalSteps <- ddply(activityData,.(date), summarize, Total.Steps=sum(steps))
+qplot(x=date,y=Total.Steps,data=totalSteps,geom="bar",
+                 stat="identity")
+# Compute mean of total steps taken per day, removing NAs for a numeric result
+mean(totalSteps$Total.Steps, na.rm=TRUE)
+# Compute median of total steps taken each day, removing NAs for a numeric result
+median(totalSteps$Total.Steps,na.rm=TRUE)
+```
+
+The mean of total steps per day calculated without imputing NA values is `r mean(totalSteps$Total.Steps, na.rm=TRUE)` and the corresponding median of total steps per days is `r median(totalSteps$Total.Steps,na.rm=TRUE)`.  
+
+### Strategy to impute missing values  
+
+We see that there are `r sum(is.na(activityData$steps))` NA values in the steps variable of our activity dataset.  
+
+We will adopt a strategy to replace NA values by the mean values of steps in the corresponding 5 minute intervals across the days. For example: a NA value in the beginning of the day (interval value '0') would be replaced by the mean value of the steps taken during the beginning of all the days (interval value '0'). A new dataset with imputed values is created in the following piece of R code.  
 
 
+```{r}
+# Replace NAs with mean values grouped by intervals in a day
+activityDataNew <- ddply(activityData, .(interval), function(df) {df$steps[is.na(df$steps)] <- mean(df$steps, na.rm=TRUE); return(df)})
+# Sort the new activity dataset by date and interval as the previous dataset was
+activityDataNew <- activityDataNew[with(activityDataNew,order(date,interval)),]
+```
+### Calculation of Total Steps taken each day with mean and median  
+Using the new dataset with NA values imputed  
 
-## Are there differences in activity patterns between weekdays and weekends?
+```{r}
+# Prepare a histogram of the steps. Mising (NA) values have been imputed.
+totalSteps <- ddply(activityDataNew,.(date), summarize, Total.Steps=sum(steps))
+qplot(x=date,y=Total.Steps,data=totalSteps,geom="bar",
+                 stat="identity")
+# Compute mean of total steps taken per day, removing NAs for a numeric result
+mean(totalSteps$Total.Steps, na.rm=TRUE)
+# Compute median of total steps taken each day, removing NAs for a numeric result
+median(totalSteps$Total.Steps,na.rm=TRUE)
+```     
+The mean of total steps per day calculated after imputing NA values is `r mean(totalSteps$Total.Steps,na.rm=TRUE)` and the corresponding median of total steps per days is `r median(totalSteps$Total.Steps,na.rm=TRUE)`.  
+
+As evident from the results, there is no difference in the means of total steps taken per day calculated before and after imputation of NAs. There is a minor difference in the medians calculated before and after imputation of NAs.  
+
+### Assessing differences in activity patterns in weekdays and weekends  
+We introduce a factor variable called 'Day.Type' in the new imputed dataset classifying the day as a weekday or weekend. We then prepare a panel plot to compare average steps taken in weekdays versus weekends.  
+
+
+```{r}
+# Introducing new factor variable to classify day as weekday or weekend  
+activityDataNew$Day.Type <- with(activityDataNew,ifelse(wday(activityDataNew$date)==1 | wday(activityDataNew$date)==7,"weekend","weekday"))
+# Calculate average steps by interval taken across weekdays and weekends  
+avgSteps <- ddply(activityDataNew,.(interval,Day.Type), summarize, 
+                  Avg.Steps=mean(steps,na.rm=TRUE))
+# Prepare panel plot to show average steps taken across weekdays and weekends
+ggplot(avgSteps,aes(interval,Avg.Steps))+geom_line()+facet_grid(.~Day.Type) + facet_wrap(~Day.Type,ncol=1)
+```
+
+By looking at the plots for weekday and weekend we can see that the number of steps taken during earlier hours of the day in weekdays is more compared to early hours in the weekends.  
+
