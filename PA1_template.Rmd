@@ -84,5 +84,4 @@ avgSteps <- ddply(activityDataNew,.(interval,Day.Type), summarize,
 ggplot(avgSteps,aes(interval,Avg.Steps))+geom_line()+facet_grid(.~Day.Type) + facet_wrap(~Day.Type,ncol=1)
 ```
 
-By looking at the plots for weekday and weekend we can see that the number of steps taken during earlier hours of the day in weekdays is more compared to early hours in the weekends.  
-
+By looking at the plots for weekday and weekend we can see that the number of steps taken during earlier hours of the day in weekdays is more compared to early hours in the weekends. Specifically, the maximum average steps are taken in the  `r avgSteps[which.max(avgSteps$Avg.Steps),1]` interval.  
